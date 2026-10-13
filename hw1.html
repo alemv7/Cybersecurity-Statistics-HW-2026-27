@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW 01 · Elliptic-Curve Scalar Multiplication · Alessandro Bertoldi</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b1110;--panel:#121b19;--line:#233230;--text:#e6f1ee;--muted:#8aa39d;--green:#34d399;--violet:#a78bfa;
+--ac:#34d399;--ac2:#a78bfa;--mut:#8aa39d;--fg:#e6f1ee;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Fira Code',ui-monospace,monospace}
+@media (prefers-color-scheme:light){:root{--bg:#f4f8f6;--panel:#fff;--line:#d3e0db;--text:#10211c;--muted:#58716a;--green:#059669;--violet:#7c3aed;--ac:#059669;--ac2:#7c3aed;--mut:#58716a;--fg:#10211c}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6}
+.wrap{max-width:900px;margin:0 auto;padding:0 1.1rem}
+a{color:var(--green);text-decoration:none}
+header{padding:2.5rem 0 1rem}.prompt{font-family:var(--mono);font-size:.8rem;color:var(--green)}
+h1{font-size:clamp(1.7rem,5vw,2.5rem);letter-spacing:-.03em;line-height:1.1;margin:.5rem 0}h1 span{color:var(--violet)}
+h2{font-size:1.2rem;margin:0 0 .6rem}h2 small{font-family:var(--mono);color:var(--muted);font-size:.7rem;margin-right:.5rem}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;margin:1.1rem 0}
+p{font-size:.93rem;color:var(--muted);margin:.4rem 0}b{color:var(--text);font-weight:500}
+input,button{font:inherit;font-size:.85rem;padding:.4rem .6rem;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+input{width:62px}input[type=range]{width:120px;padding:0}
+button{cursor:pointer;border-color:var(--green);color:var(--green);margin:.3rem .3rem 0 0}
+button:hover{background:color-mix(in srgb,var(--green) 12%,var(--bg))}
+label{font-size:.75rem;color:var(--muted);font-family:var(--mono);margin-right:.6rem;white-space:nowrap}
+.row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;font-size:.8rem}td,th{border:1px solid var(--line);padding:.3rem .55rem;text-align:center;color:var(--muted)}th{color:var(--text)}
+pre,code{font-family:var(--mono);font-size:.76rem;color:var(--text)}
+pre{background:var(--bg);border:1px solid var(--line);padding:.6rem;border-radius:8px;overflow-x:auto;max-height:240px;margin:.4rem 0}
+canvas{max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:var(--bg);margin-top:.5rem}
+.pub{font-family:var(--mono);font-size:1.05rem;color:var(--green);font-weight:500}
+.bars{display:flex;align-items:flex-end;gap:2px;height:80px;margin-top:.3rem}.bars div{flex:1;background:var(--green);min-width:4px;border-radius:2px 2px 0 0}
+.lab{display:flex;gap:2px;font-size:10px;color:var(--muted)}.lab span{flex:1;text-align:center;min-width:4px}
+.err{color:#f87171;font-size:.85rem}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.hint{font-size:.8rem}
+footer{padding:1.5rem 0;color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);margin-top:1.5rem}
+</style></head>
+<body><div class="wrap">
+<header><a href="index.html" class="prompt">← ~/sapienza/cybersecurity</a>
+<h1>HW 01 · Private key → <span>Public key</span></h1>
+<p>Alessandro Bertoldi · Statistics in Cybersecurity. Toy curve y² = x³ + 7 (mod p) · Q = k·G · same concept as secp256k1 in Ethereum, but with tiny numbers.</p></header>
+
+<section><h2><small>01</small>Parameters</h2>
+<div class="row"><label>p <input id="p" value="17"></label><label>b <input id="b" value="7"></label>
+<label>Gx <input id="gx" value="1"></label><label>Gy <input id="gy" value="5"></label>
+<label>k (private) <input id="k" value="6"></label>
+<button onclick="run()">Compute</button></div>
+<div id="msg"></div></section>
+
+<section><h2><small>02</small>G, 2G, 3G, …, kG</h2>
+<div class="scroll"><pre id="lst"></pre></div>
+<p>Double-and-add (fast):</p><div class="scroll"><pre id="fast"></pre></div>
+<p>TOY PUBLIC KEY: <span class="pub" id="pub"></span></p></section>
+
+<section><h2><small>03</small>Slow-motion visualization</h2>
+<div class="row"><button onclick="play()">▶ Play</button><button onclick="stepOnce()">Step</button><button onclick="resetAnim()">Reset</button>
+<label>speed <input type="range" id="spd" min="200" max="2000" value="900"></label></div>
+<canvas id="cv" width="540" height="540"></canvas>
+<div id="cap" style="min-height:24px;font-size:.9rem"></div>
+<p class="hint">Gray points = all points on the curve; line = chord (or tangent) used to step from jG to (j+1)G; violet point = current result.</p></section>
+
+<section><h2><small>04</small>Statistical exploration (all k = 1…n−1)</h2>
+<div id="stat"></div></section>
+
+<section><h2><small>05</small>Discussion</h2>
+<p><b>Observations on the toy setup.</b> The group order is small, so points repeat with period n: for p = 17, the curve has 18 points (including the point at infinity), meaning k and k+n yield the same point Q and the discrete logarithm problem is trivially solvable via brute force. Real security relies solely on n ≈ 2²⁵⁶.</p>
+<p><b>Meaningful properties for a one-way function (ECDLP):</b> determinism; fast forward computation (double-and-add, ~log k steps); hardness of inversion; "seemingly uniform" output over the curve points (no exploitable information about k from the distributions of x, y, or individual bits); absence of exploitable correlation between k and Q <i>in practice</i>.</p>
+<p><b>Typical hash function properties not required (and absent) here:</b> the avalanche effect and collision/second-preimage resistance for arbitrary-length inputs with fixed-size outputs. The mapping kG is a homomorphism: (k₁+k₂)G = k₁G + k₂G, hence Q(k+1) = Q(k) + G. Flipping a single bit of k does NOT flip half of the bits of Q at random; this algebraic structure is hidden only by the hardness of the DLP, and this very structure enables digital signatures and ECDH. A hash function, in contrast, must destroy any algebraic structure.</p>
+<p><b>In summary:</b> uniformity and non-invertibility are relevant to both; avalanche and collision resistance are hash-specific properties; linearity (homomorphism) is a deliberate and essential feature of ECC that hash functions must not possess.</p></section>
+<footer>© 2026 Alessandro Bertoldi · Statistics in Cybersecurity</footer>
+</div>
+<script>
+let P=17,B=7,G,N,ptsAll=[],pts=[],K=6,anim={i:0,t:null};
+const md=a=>((a%P)+P)%P;
+function pw(a,e){let r=1;a=md(a);while(e>0){if(e&1)r=r*a%P;a=a*a%P;e>>=1}return r}
+const inv=a=>pw(a,P-2);
+const eq=(a,b)=>a&&b&&a[0]==b[0]&&a[1]==b[1];
+function add(a,b){
+ if(!a)return b;if(!b)return a;
+ if(a[0]==b[0]&&md(a[1]+b[1])==0)return null;
+ let l=eq(a,b)?md(3*a[0]*a[0])*inv(2*a[1])%P:md(b[1]-a[1])*inv(b[0]-a[0])%P;
+ let x=md(l*l-a[0]-b[0]);return [x,md(l*(a[0]-x)-a[1])]}
+function mulFast(k,g){let R=null,Q=g,log=[];const bits=k.toString(2);
+ for(let i=0;i<bits.length;i++){ // left-to-right
+  if(i==0){R=g;log.push(`bit ${bits[i]} → R = G = ${f(R)}`);continue}
+  R=add(R,R);let s=`bit ${bits[i]} → double: ${f(R)}`;
+  if(bits[i]=='1'){R=add(R,g);s+=`, + G: ${f(R)}`}log.push(s)}
+ return {R,log,bits}}
+const f=p=>p?`(${p[0]}, ${p[1]})`:'∞';
+function run(){
+ P=+p.value;B=+b.value;G=[+gx.value,+gy.value];K=+k.value;const m=document.getElementById('msg');
+ if(![2,3,5,7,11,13,17,19,23,29,31,37,41,43,47].includes(P)){m.innerHTML='<span class="err">Use a small prime p (≤ 47).</span>';return}
+ if(md(G[1]*G[1])!=md(G[0]**3+B)){m.innerHTML='<span class="err">G is not on the curve!</span>';return}
+ m.innerHTML='';ptsAll=[];
+ for(let x=0;x<P;x++)for(let y=0;y<P;y++)if(md(y*y)==md(x**3+B))ptsAll.push([x,y]);
+ pts=[null,G];let c=G;N=1;
+ for(;;){c=add(c,G);if(!c)break;pts.push(c);N++;if(N>200)break}
+ // N = order of G
+ let L=[];c=null;for(let j=1;j<=K;j++){c=add(c,G);L.push(`${j}G = ${f(c)}`+(j>N?`   (period ${N}: = ${((j-1)%N)+1}G)`:''))}
+ lst.textContent=`curve: ${ptsAll.length+1} points (incl. ∞), order of G = ${N}\n`+L.join('\n');
+ const r=mulFast(K,G);fast.textContent=`k = ${K} = ${r.bits}₂\n`+r.log.join('\n');
+ pub.textContent=`Q = ${K}·G = ${f(r.R)}`;
+ resetAnim();stats()}
+function draw(upto){
+ const c=cv.getContext('2d'),W=cv.width,s=W/(P+1),css=getComputedStyle(document.documentElement);
+ const ac=css.getPropertyValue('--ac'),a2=css.getPropertyValue('--ac2'),mu=css.getPropertyValue('--mut'),fg=css.getPropertyValue('--fg');
+ c.clearRect(0,0,W,W);const X=x=>(x+1)*s,Y=y=>W-(y+1)*s;
+ c.strokeStyle=mu;c.globalAlpha=.25;for(let i=0;i<P;i++){c.beginPath();c.moveTo(X(i),Y(0));c.lineTo(X(i),Y(P-1));c.moveTo(X(0),Y(i));c.lineTo(X(P-1),Y(i));c.stroke()}
+ c.globalAlpha=1;c.fillStyle=mu;c.font='10px sans-serif';c.textAlign='center';
+ for(let i=0;i<P;i++){c.fillText(i,X(i),W-4);c.fillText(i,10,Y(i)+3)}
+ ptsAll.forEach(p=>{c.beginPath();c.arc(X(p[0]),Y(p[1]),s*.2,0,7);c.globalAlpha=.5;c.fillStyle=mu;c.fill()});c.globalAlpha=1;
+ for(let j=1;j<=upto;j++){const q=pts[((j-1)%N)+1];if(j>1){const p0=pts[((j-2)%N)+1];c.strokeStyle=ac;c.globalAlpha=.6;c.beginPath();c.moveTo(X(p0[0]),Y(p0[1]));c.lineTo(X(q[0]),Y(q[1]));c.stroke();c.globalAlpha=1}
+  c.beginPath();c.arc(X(q[0]),Y(q[1]),s*.26,0,7);c.fillStyle=j==upto?a2:ac;c.fill();
+  c.fillStyle=fg;c.font='bold 11px sans-serif';c.fillText(j+'G',X(q[0])+s*.1,Y(q[1])-s*.35)}}
+function resetAnim(){clearTimeout(anim.t);anim.i=0;anim.run=false;draw(0);cap.textContent='Ready.'}
+function stepOnce(){if(anim.i>=K){return false}anim.i++;const j=anim.i;draw(j);const q=pts[((j-1)%N)+1];
+ cap.innerHTML=j==1?`1G = G = ${f(q)}`:`${j}G = ${j-1}G + G = ${f(q)} ${j==2?'(doubling: tangent)':'(addition: chord)'}`+(j==K?` &nbsp;<b class="pub">← PUBLIC KEY</b>`:'');return true}
+function play(){clearTimeout(anim.t);if(anim.i>=K)resetAnim();const go=()=>{if(stepOnce())anim.t=setTimeout(go,+spd.value)};go()}
+function bitsOf(v,n){return Array.from({length:n},(_,i)=>(v>>i)&1)}
+function hist(arr,size,label){const mx=Math.max(...arr,1);
+ return `<div><b>${label}</b><div class="bars">${arr.map((v,i)=>`<div title="${i}: ${v}" style="height:${v/mx*100}%"></div>`).join('')}</div><div class="lab">${arr.map((_,i)=>`<span>${i}</span>`).join('')}</div></div>`}
+function corr(a,b){const n=a.length,ma=a.reduce((s,v)=>s+v)/n,mb=b.reduce((s,v)=>s+v)/n;let sa=0,sb=0,sc=0;
+ for(let i=0;i<n;i++){sa+=(a[i]-ma)**2;sb+=(b[i]-mb)**2;sc+=(a[i]-ma)*(b[i]-mb)}return sa&&sb?sc/Math.sqrt(sa*sb):0}
+function stats(){
+ const ks=[],xs=[],ys=[];for(let j=1;j<N;j++){ks.push(j);xs.push(pts[j][0]);ys.push(pts[j][1])}
+ const hx=Array(P).fill(0),hy=Array(P).fill(0);xs.forEach(v=>hx[v]++);ys.forEach(v=>hy[v]++);
+ const nb=Math.ceil(Math.log2(P));
+ const bx=Array(nb).fill(0),by=Array(nb).fill(0);
+ xs.forEach(v=>bitsOf(v,nb).forEach((b,i)=>bx[i]+=b));ys.forEach(v=>bitsOf(v,nb).forEach((b,i)=>by[i]+=b));
+ const m=ks.length;
+ // successive differences
+ const dx=[];for(let i=1;i<xs.length;i++)dx.push(md(xs[i]-xs[i-1]));
+ // avalanche
+ let tot=0,cnt=0;
+ for(let j=1;j<N;j++)for(let i=0;i<Math.ceil(Math.log2(N));i++){const j2=j^(1<<i);if(j2<1||j2>=N)continue;
+  const a=pts[j],b2=pts[j2];const h=bitsOf(a[0]^b2[0],nb).reduce((s,v)=>s+v)+bitsOf(a[1]^b2[1],nb).reduce((s,v)=>s+v);tot+=h;cnt++}
+ const ideal=nb; // half of the 2*nb bits
+ const dist=(h)=>h.filter(v=>v>0).length;
+ stat.innerHTML=`<p>Order of G: <b>${N}</b> → ${m} distinct public keys (k = 1…${N-1}). Curve points (without ∞): ${ptsAll.length}.</p>
+ <div class="grid2">${hist(hx,P,'Frequency of x values')}${hist(hy,P,'Frequency of y values')}</div>
+ <p>Distinct x values used: ${dist(hx)}/${P} · distinct y: ${dist(hy)}/${P}. Each x appears at most twice (±y) and each y at most 3 times, because y² = x³+7 is 3-to-1 in x³ when p ≡ 2 (mod 3); thus the distribution is <i>not</i> uniform over [0,p), but it is over the curve points.</p>
+ <div class="scroll"><table><tr><th>bit</th>${bx.map((_,i)=>`<th>${i}</th>`).join('')}</tr>
+ <tr><td>x: freq. of 1</td>${bx.map(v=>`<td>${(v/m).toFixed(2)}</td>`).join('')}</tr>
+ <tr><td>y: freq. of 1</td>${by.map(v=>`<td>${(v/m).toFixed(2)}</td>`).join('')}</tr></table></div>
+ <p>Pearson correlation: corr(k, x) = <b>${corr(ks,xs).toFixed(3)}</b>, corr(k, y) = <b>${corr(ks,ys).toFixed(3)}</b>, corr(x, y) = <b>${corr(xs,ys).toFixed(3)}</b> (values close to 0 → no evident linear relationship).</p>
+ <p>Avalanche effect (1-bit flip of k): on average, <b>${(tot/cnt).toFixed(2)}</b> out of ${2*nb} bits of (x,y) change. An ideal hash function would yield ≈ ${ideal}. This deviation indicates that a single flipped bit in k does not propagate in a "chaotic" manner: the additive structure Q(k+1) = Q(k) + G is preserved.</p>`}
+run();
+</script></body></html>
