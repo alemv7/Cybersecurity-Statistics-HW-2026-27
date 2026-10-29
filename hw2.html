@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HW 02 · From Wallet Seed to Ethereum Address</title>
+<title>HW 1.2 · From Wallet Seed to Ethereum Address</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0b1110;--panel:#121b19;--line:#233230;--text:#e6f1ee;--muted:#8aa39d;--green:#34d399;--violet:#a78bfa;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Fira Code',ui-monospace,monospace}
@@ -36,7 +36,7 @@ details.dt[open] summary::after{content:"\2212"}details.dt .ti{flex:1;font-weigh
 </style></head>
 <body><div class="wrap">
 <header><a href="index.html" class="prompt">← ~/sapienza/cybersecurity</a>
-<h1>HW 02 · From <span>seed</span> to Ethereum Address</h1>
+<h1>HW 1.2 · From <span>seed</span> to Ethereum Address</h1>
 <p>Alessandro Bertoldi · Statistics in Cybersecurity. Pipeline: Mnemonic → BIP-39 → Seed → BIP-32/44 → private key → secp256k1 → public key → Keccak-256 → address → EIP-55.</p></header>
 
 <section><h2><small>01</small>Worked pipeline example</h2><p>Computed by the browser upon opening the page using the BIP-39 <b>public test vector</b> (mnemonic containing only the words "abandon … about"), path <code style="display:inline">m/44'/60'/0'/0/0</code>, empty passphrase. To verify it, you can import the same mnemonic into MetaMask, Rabby, or similar: you should obtain the exact same address. Never use this mnemonic for real funds.</p><button onclick="tg(true)">Expand all</button><button onclick="tg(false)">Collapse all</button><p style="font-size:.8rem">Click each step to expand it: they are presented in the order the wallet executes them.</p><div id="out"></div></section>
