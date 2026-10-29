@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW 3 · Penetration scores: LLN and CLT · Alessandro Bertoldi</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b1110;--panel:#121b19;--line:#233230;--text:#e6f1ee;--muted:#8aa39d;--green:#34d399;--violet:#a78bfa;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Fira Code',ui-monospace,monospace}
+@media (prefers-color-scheme:light){:root{--bg:#f4f8f6;--panel:#fff;--line:#d3e0db;--text:#10211c;--muted:#58716a;--green:#059669;--violet:#7c3aed}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6}
+.wrap{max-width:960px;margin:0 auto;padding:0 1.1rem}
+a{color:var(--green);text-decoration:none}
+header{padding:2.5rem 0 1rem}.prompt{font-family:var(--mono);font-size:.8rem;color:var(--green)}
+h1{font-size:clamp(1.7rem,5vw,2.5rem);letter-spacing:-.03em;line-height:1.1;margin:.5rem 0}h1 span{color:var(--violet)}
+h2{font-size:1.2rem;margin:0 0 .6rem}h2 small{font-family:var(--mono);color:var(--muted);font-size:.7rem;margin-right:.5rem}h3{font-size:.98rem;margin:1rem 0 .3rem}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;margin:1.1rem 0}
+p,li{font-size:.92rem;color:var(--muted)}p{margin:.4rem 0}li{margin-left:1.1rem}b{color:var(--text);font-weight:500}
+input,button{font:inherit;font-size:.85rem;padding:.4rem .6rem;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);width:100%}
+button{width:auto;cursor:pointer;border-color:var(--green);color:var(--green);margin:.4rem .4rem 0 0}button:hover{background:color-mix(in srgb,var(--green) 12%,var(--bg))}
+label{font-size:.72rem;color:var(--muted);font-family:var(--mono)}
+.row{display:flex;gap:.6rem;flex-wrap:wrap}.row>div{flex:1;min-width:110px}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.8rem}td,th{border:1px solid var(--line);padding:.35rem .5rem;text-align:left;color:var(--muted);white-space:nowrap}th{color:var(--text)}
+.th{color:var(--violet)}
+canvas{width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:var(--bg);display:block}
+.g{display:grid;gap:8px}.cap{font-size:.72rem;color:var(--muted);font-family:var(--mono)}
+.mod{border-top:1px solid var(--line);margin-top:1.2rem;padding-top:.6rem}.mod>h2{color:var(--green)}
+.ok{color:var(--green)}.bad{color:#f87171}
+footer{padding:1.5rem 0;color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);margin-top:1.5rem}
+</style></head>
+<body><div class="wrap">
+<header><a href="index.html" class="prompt">← ~/sapienza/cybersecurity</a>
+<h1>HW 3 · Penetration scores: <span>LLN</span> and <span>CLT</span></h1>
+<p>Alessandro Bertoldi · Statistics in Cybersecurity. n systems, m attackers: each attacker is a random trajectory of i.i.d. scores X₁…Xₙ, and we study Sₙ, Sₙ/n and Sₙ/√n as n grows.</p></header>
+
+<section><h2><small>01</small>Model and what to expect</h2>
+<ul><li><b>Setup.</b> Attacker a goes through n systems; Xᵢ is the score obtained on system i. <b>Bernoulli</b>: Xᵢ ∈ {0,1}, P(1) = p (system compromised or not), μ = p, σ² = p(1−p). <b>Rademacher</b>: Xᵢ = ±1 with prob. ½ (symmetric progress/setback), μ = 0, σ² = 1.</li>
+<li><b>Total score</b> Sₙ: E = nμ, Var = nσ². Spread grows like √n.</li>
+<li><b>Average</b> Sₙ/n: E = μ, Var = σ²/n → 0. LLN: P(|Sₙ/n − μ| &gt; ε) → 0 (convergence in probability). Chebyshev gives σ²/(nε²), Hoeffding an exponential bound.</li>
+<li><b>Normalized total</b> Sₙ/√n: Var = σ² for every n, so the fluctuations neither vanish nor explode. CLT: (Sₙ − nμ)/(σ√n) → N(0,1) in distribution. For Rademacher μ = 0, so Sₙ/√n itself → N(0,1). For Bernoulli Sₙ/√n has mean μ√n → ∞ and only its <i>centered</i> version converges.</li></ul></section>
+
+<section><h2><small>02</small>Simulation</h2>
+<div class="row"><div><label>n values (≤5, comma sep.)</label><input id="ns" value="10, 100, 1000, 10000"></div>
+<div><label>m attackers</label><input id="m" type="number" value="2000" min="50" max="20000"></div>
+<div><label>p (Bernoulli)</label><input id="p" type="number" value="0.3" step="0.05" min="0.01" max="0.99"></div>
+<div><label>ε (LLN)</label><input id="eps" type="number" value="0.05" step="0.01" min="0.001"></div>
+<div><label>trajectories plotted</label><input id="K" type="number" value="15" min="1" max="60"></div>
+<div><label>seed</label><input id="seed" type="number" value="42"></div></div>
+<button onclick="run(['b'])">Run Bernoulli</button><button onclick="run(['r'])">Run Rademacher</button><button onclick="run(['b','r'])">Run both</button>
+<p id="msg"></p><div id="out"></div></section>
+
+<section><h2><small>03</small>Interpretation: n systems, m attackers</h2>
+<ul><li><b>System size n.</b> For the Bernoulli model the total number of compromised systems grows linearly, ≈ np, but its uncertainty only like √(np(1−p)); the <i>fraction</i> compromised Sₙ/n therefore concentrates at p: for large n the aggregate outcome becomes predictable (LLN) even though each single system is random. In the symmetric Rademacher case the average score goes to 0, yet the total wanders at the scale √n; Sₙ/√n shows this scale is stable and Gaussian (CLT), which gives confidence intervals such as Sₙ ∈ ±2σ√n with about 95% probability.</li>
+<li><b>Number of attackers m.</b> m does not change the law of any single attacker's score. It improves how precisely we can <i>estimate</i> the distribution (error ≈ 1/√m, see the KS critical value) and it drives the worst case: among m independent attackers the best one reaches about nμ + σ√(2n ln m), so extreme outcomes grow with √ln m while the typical one does not. The total over all attackers scales like m·n·μ in the mean.</li>
+<li><b>Variance under each normalization.</b> Var(Sₙ) = nσ² (grows), Var(Sₙ/n) = σ²/n (vanishes, concentration), Var(Sₙ/√n) = σ² (constant, the non-degenerate limit).</li>
+<li><b>Limits of the model.</b> Real systems are not i.i.d.: shared vulnerabilities create positive correlation (slower concentration, larger variance), heavy-tailed scores can break the CLT, attackers adapt, and p varies across systems. The lattice nature of Sₙ also makes the Gaussian approximation visibly coarse for small n (see the continuity-corrected KS column).</li></ul></section>
+<footer>© 2026 Alessandro Bertoldi · Simulations run in your browser (seeded PRNG, reproducible).</footer>
+</div>
+<script>
+//CORE
+function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+const erf=x=>{const s=Math.sign(x);x=Math.abs(x);const t=1/(1+.3275911*x);return s*(1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-x*x))};
+const Phi=z=>.5*(1+erf(z/Math.SQRT2)),phi=(z,m,s)=>Math.exp(-.5*((z-m)/s)**2)/(s*Math.sqrt(2*Math.PI));
+const mean=a=>a.reduce((s,v)=>s+v,0)/a.length,vari=a=>{const m=mean(a);return a.reduce((s,v)=>s+(v-m)**2,0)/(a.length-1)};
+function sim(model,p,ns,m,seed){const r=rng(seed),b=model=='b',out=ns.map(()=>new Float64Array(m)),nmax=ns[ns.length-1];
+for(let a=0;a<m;a++){let s=0,c=0;for(let i=1;i<=nmax;i++){s+=b?(r()<p?1:0):(r()<.5?1:-1);if(i===ns[c]){out[c][a]=s;c++}}}return out}
+function simPaths(model,p,K,nmax,seed){const r=rng(seed+7),b=model=='b',P=[];for(let a=0;a<K;a++){const x=new Float32Array(nmax+1);let s=0;for(let i=1;i<=nmax;i++){s+=b?(r()<p?1:0):(r()<.5?1:-1);x[i]=s}P.push(x)}return P}
+function ks(Z,h){const z=Float64Array.from(Z).sort(),m=z.length;let d=0,dc=Phi(z[0]-h/2);
+for(let i=0;i<m;i++){const q=Phi(z[i]);d=Math.max(d,Math.abs((i+1)/m-q),Math.abs(q-i/m));if(i==m-1||z[i+1]>z[i]+1e-9)dc=Math.max(dc,Math.abs((i+1)/m-Phi(z[i]+h/2)))}return{d,dc}}
+//ENDCORE
+const $=i=>document.getElementById(i);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const f3=x=>!Number.isFinite(x)?'—':(Math.abs(x)>=10000||(Math.abs(x)<.01&&x!==0)?x.toExponential(2):x.toFixed(Math.abs(x)>=100?1:3));
+const fp=x=>x===0?'0':x<1e-3?x.toExponential(1):x.toFixed(4);
+function hist(cv,v,lw,ov){const c=cv.getContext('2d'),W=cv.width,Hh=cv.height;let mn=Infinity,mx=-Infinity;for(const x of v){if(x<mn)mn=x;if(x>mx)mx=x}
+const k=Math.max(1,Math.ceil(((mx-mn)/lw)/36)),w=lw*k,nb=Math.round((mx-mn)/w)+1,cnt=new Float64Array(nb);for(const x of v)cnt[Math.round((x-mn)/w)]++;
+const dn=Array.from(cnt,q=>q/(v.length*w)),ym=Math.max(...dn,phi(ov.m,ov.m,ov.s))*1.1,lo=Math.min(mn-w,ov.m-3.5*ov.s),hi=Math.max(mx+w,ov.m+3.5*ov.s);
+const X=x=>8+(x-lo)/(hi-lo)*(W-16),Y=d=>Hh-16-d/ym*(Hh-22);c.clearRect(0,0,W,Hh);
+c.fillStyle=css('--green');c.globalAlpha=.75;dn.forEach((d,i)=>{const x=mn+i*w;c.fillRect(X(x-w/2),Y(d),Math.max(1,X(x+w/2)-X(x-w/2)-1),Y(0)-Y(d))});c.globalAlpha=1;
+c.strokeStyle=css('--violet');c.lineWidth=2;c.beginPath();for(let i=0;i<=120;i++){const x=lo+(hi-lo)*i/120,y=Y(phi(x,ov.m,ov.s));i?c.lineTo(X(x),y):c.moveTo(X(x),y)}c.stroke();
+c.fillStyle=css('--muted');c.font='10px sans-serif';c.textAlign='left';c.fillText(f3(lo),4,Hh-3);c.textAlign='right';c.fillText(f3(hi),W-4,Hh-3);c.textAlign='center';c.fillText(f3(ov.m),X(ov.m),Hh-3)}
+function paths(cv,P,f,curves,xmax,yl){const c=cv.getContext('2d'),W=cv.width,Hh=cv.height,X=k=>34+k/xmax*(W-42),Y=y=>Hh-18-(y-yl[0])/(yl[1]-yl[0])*(Hh-26);c.clearRect(0,0,W,Hh);
+c.save();c.beginPath();c.rect(30,0,W-30,Hh-16);c.clip();c.strokeStyle=css('--violet');c.globalAlpha=.55;c.lineWidth=1;
+P.forEach(p=>{c.beginPath();for(let k=1;k<=xmax;k++){const x=X(k),y=Y(f(k,p[k]));k>1?c.lineTo(x,y):c.moveTo(x,y)}c.stroke()});c.globalAlpha=1;
+curves.forEach(cu=>{c.strokeStyle=css('--green');c.lineWidth=cu.w||1.6;c.setLineDash(cu.d||[]);c.beginPath();for(let k=1;k<=xmax;k++){const x=X(k),y=Y(cu.f(k));k>1?c.lineTo(x,y):c.moveTo(x,y)}c.stroke()});c.restore();
+c.fillStyle=css('--muted');c.font='10px sans-serif';c.textAlign='right';c.fillText(f3(yl[1]),30,10);c.fillText(f3(yl[0]),30,Hh-20);c.textAlign='left';c.fillText('1',34,Hh-4);c.textAlign='right';c.fillText('k = '+xmax,W-4,Hh-4)}
+function render(model,pr){const b=model=='b',{p,ns,m,eps,K,seed}=pr,mu=b?p:0,s2=b?p*(1-p):1,sg=Math.sqrt(s2),lw=b?1:2,nmax=ns[ns.length-1],id=model;
+const S=sim(model,p,ns,m,seed),pp=simPaths(model,p,K,Math.min(nmax,5000),seed),xm=Math.min(nmax,5000),cols=`grid-template-columns:repeat(${ns.length},minmax(0,1fr))`;
+const rows=[['Total score Sₙ  (green: sample histogram, violet: normal N(nμ, nσ²))',(s,n)=>s,n=>({m:n*mu,s:sg*Math.sqrt(n)}),n=>lw],
+['Average Sₙ/n  (violet: N(μ, σ²/n))',(s,n)=>s/n,n=>({m:mu,s:sg/Math.sqrt(n)}),n=>lw/n],
+['Normalized total Sₙ/√n  (violet: N(μ√n, σ²))',(s,n)=>s/Math.sqrt(n),n=>({m:mu*Math.sqrt(n),s:sg}),n=>lw/Math.sqrt(n)],
+['Standardized Zₙ = (Sₙ − nμ)/(σ√n)  (violet: N(0,1))',(s,n)=>(s-n*mu)/(sg*Math.sqrt(n)),n=>({m:0,s:1}),n=>lw/(sg*Math.sqrt(n))]];
+let h=`<div class="mod"><h2>${b?`Bernoulli model, p = ${p}  (μ = ${p}, σ² = ${s2.toFixed(3)})`:'Rademacher model  (μ = 0, σ² = 1)'}</h2>
+<h3>Sample trajectories of ${K} attackers (first ${xm} systems)</h3><div class="g" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+<div><canvas id="${id}p0" width="440" height="250"></canvas><span class="cap">Sₖ with mean kμ and ±2σ√k</span></div>
+<div><canvas id="${id}p1" width="440" height="250"></canvas><span class="cap">Sₖ/k with μ and ±2σ/√k: LLN funnel</span></div>
+<div><canvas id="${id}p2" width="440" height="250"></canvas><span class="cap">Sₖ/√k with μ√k ± 2σ: fluctuations of constant size</span></div></div>
+<h3>Distributions over m = ${m} attackers</h3>`;
+rows.forEach((r,i)=>{h+=`<p><b>${r[0]}</b></p><div class="g" style="${cols}">${ns.map((n,j)=>`<div><canvas id="${id}h${i}${j}" width="260" height="130"></canvas><span class="cap">n = ${n}</span></div>`).join('')}</div>`});
+h+=`<h3>Moments: empirical (theory)</h3><div class="scroll"><table><tr><th>n</th><th>Var Sₙ (nσ²)</th><th>Var Sₙ/n (σ²/n)</th><th>Var Sₙ/√n (σ²)</th><th>E Sₙ/√n (μ√n)</th><th>max over m attackers of Sₙ (≈ nμ+σ√(2n ln m))</th></tr>`;
+ns.forEach((n,c)=>{const s=S[c],q=s.map(v=>v/n),z=s.map(v=>v/Math.sqrt(n)),th=x=>`<span class="th">(${f3(x)})</span>`;
+h+=`<tr><td>${n}</td><td>${f3(vari(s))} ${th(n*s2)}</td><td>${f3(vari(q))} ${th(s2/n)}</td><td>${f3(vari(z))} ${th(s2)}</td><td>${f3(mean(z))} ${th(mu*Math.sqrt(n))}</td><td>${f3(Math.max(...s))} ${th(n*mu+sg*Math.sqrt(2*n*Math.log(m)))}</td></tr>`});
+h+=`</table></div><h3>Law of large numbers: P(|Sₙ/n − μ| &gt; ε), ε = ${eps}</h3><div class="scroll"><table><tr><th>n</th><th>empirical</th><th>Chebyshev σ²/(nε²)</th><th>Hoeffding</th></tr>`;
+ns.forEach((n,c)=>{let e=0;S[c].forEach(v=>{if(Math.abs(v/n-mu)>eps)e++});const ch=Math.min(1,s2/(n*eps*eps)),hf=Math.min(1,2*Math.exp(b?-2*n*eps*eps:-n*eps*eps/2));
+h+=`<tr><td>${n}</td><td><b>${fp(e/m)}</b></td><td>${fp(ch)}</td><td>${fp(hf)}</td></tr>`});
+h+=`</table></div><p>The empirical probability is below both bounds and tends to 0: Sₙ/n converges in probability to μ. The bounds are not tight (Chebyshev especially).</p>
+<h3>Central limit theorem: Kolmogorov–Smirnov distance between Zₙ and N(0,1)</h3><div class="scroll"><table><tr><th>n</th><th>D raw</th><th>D with continuity correction</th><th>5% critical value 1.36/√m</th><th>verdict (corrected)</th></tr>`;
+const crit=1.358/Math.sqrt(m);ns.forEach((n,c)=>{const Z=S[c].map(v=>(v-n*mu)/(sg*Math.sqrt(n))),r=ks(Z,lw/(sg*Math.sqrt(n)));
+h+=`<tr><td>${n}</td><td>${r.d.toFixed(4)}</td><td><b>${r.dc.toFixed(4)}</b></td><td>${crit.toFixed(4)}</td><td class="${r.dc<crit?'ok':'bad'}">${r.dc<crit?'consistent with N(0,1)':'not yet normal (skewness / too few systems)'}</td></tr>`});
+h+=`</table></div><p>The raw distance is dominated by the discreteness of Sₙ (about 0.4/√n for Rademacher), the corrected one shows the real deviation from normality. ${b?'For Bernoulli the skewness (1−2p)/(σ√n) also slows convergence, especially for p far from ½.':'For Rademacher Sₙ/√n = Zₙ, so the normalized total itself converges to N(0,1).'} A distance below the critical value only means that, with m attackers, the difference cannot be detected.</p></div>`;
+const el=document.createElement('div');el.innerHTML=h;$('out').appendChild(el);
+const sgm=3*sg,yb=[Math.min(0,nmax*mu)-0,0];
+paths($(id+'p0'),pp,(k,s)=>s,[{f:k=>k*mu},{f:k=>k*mu+2*sg*Math.sqrt(k),d:[5,4]},{f:k=>k*mu-2*sg*Math.sqrt(k),d:[5,4]}],xm,[xm*mu-3*sg*Math.sqrt(xm),xm*mu+3*sg*Math.sqrt(xm)]);
+const yw=3*sg/Math.sqrt(xm/30);paths($(id+'p1'),pp,(k,s)=>s/k,[{f:k=>mu},{f:k=>mu+2*sg/Math.sqrt(k),d:[5,4]},{f:k=>mu-2*sg/Math.sqrt(k),d:[5,4]}],xm,[mu-yw,mu+yw]);
+paths($(id+'p2'),pp,(k,s)=>s/Math.sqrt(k),[{f:k=>mu*Math.sqrt(k)},{f:k=>mu*Math.sqrt(k)+2*sg,d:[5,4]},{f:k=>mu*Math.sqrt(k)-2*sg,d:[5,4]}],xm,[-3*sg,mu*Math.sqrt(xm)+3*sg]);
+rows.forEach((r,i)=>ns.forEach((n,j)=>hist($(`${id}h${i}${j}`),S[j].map(v=>r[1](v,n)),r[3](n),r[2](n))))}
+function run(models){const ns=[...new Set($('ns').value.split(/[ ,;]+/).map(Number).filter(v=>Number.isInteger(v)&&v>=2))].sort((a,b)=>a-b).slice(0,5),
+pr={p:+$('p').value,ns,m:Math.max(50,Math.min(20000,+$('m').value|0)),eps:+$('eps').value,K:Math.max(1,Math.min(60,+$('K').value|0)),seed:+$('seed').value|0},msg=$('msg');
+if(!ns.length||!(pr.p>0&&pr.p<1)||!(pr.eps>0)){msg.innerHTML='<span class="bad">Check the inputs: n values must be integers ≥ 2, 0 &lt; p &lt; 1, ε &gt; 0.</span>';return}
+if(ns[ns.length-1]*pr.m*models.length>2.5e8){msg.innerHTML='<span class="bad">Too heavy: reduce n or m (n·m up to about 10⁸ per model).</span>';return}
+msg.textContent='running…';$('out').innerHTML='';setTimeout(()=>{const t=performance.now();models.forEach(md=>render(md,pr));msg.textContent=`done in ${((performance.now()-t)/1000).toFixed(1)} s · m = ${pr.m} attackers, n up to ${ns[ns.length-1]}`},30)}
+run(['b','r']);
+</script></body></html>
