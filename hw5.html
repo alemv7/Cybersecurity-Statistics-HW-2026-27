@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW 05 · Riemann vs Lebesgue integration and the normal CDF · Alessandro Bertoldi</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b1110;--panel:#121b19;--line:#233230;--text:#e6f1ee;--muted:#8aa39d;--green:#34d399;--violet:#a78bfa;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Fira Code',ui-monospace,monospace}
+@media (prefers-color-scheme:light){:root{--bg:#f4f8f6;--panel:#fff;--line:#d3e0db;--text:#10211c;--muted:#58716a;--green:#059669;--violet:#7c3aed}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding:0 1.1rem}
+a{color:var(--green);text-decoration:none}
+header{padding:2.5rem 0 1rem}.prompt{font-family:var(--mono);font-size:.8rem;color:var(--green)}
+h1{font-size:clamp(1.7rem,5vw,2.5rem);letter-spacing:-.03em;line-height:1.1;margin:.5rem 0}h1 span{color:var(--violet)}
+h2{font-size:1.2rem;margin:0 0 .6rem}h2 small{font-family:var(--mono);color:var(--muted);font-size:.7rem;margin-right:.5rem}h3{font-size:.98rem;margin:1rem 0 .3rem}
+.part{font-family:var(--mono);font-size:.8rem;color:var(--violet);margin:1.6rem 0 -.4rem;text-transform:uppercase;letter-spacing:.1em}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;margin:1.1rem 0}
+p,li{font-size:.92rem;color:var(--muted)}p{margin:.4rem 0}li{margin-left:1.1rem}b{color:var(--text);font-weight:500}
+input,button,select{font:inherit;font-size:.85rem;padding:.4rem .6rem;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);width:100%}
+button{width:auto;cursor:pointer;border-color:var(--green);color:var(--green);margin:.4rem .4rem 0 0}button:hover{background:color-mix(in srgb,var(--green) 12%,var(--bg))}
+label{font-size:.72rem;color:var(--muted);font-family:var(--mono)}
+.row{display:flex;gap:.6rem;flex-wrap:wrap}.row>div{flex:1;min-width:130px}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.78rem}td,th{border:1px solid var(--line);padding:.3rem .5rem;text-align:left;color:var(--muted);white-space:nowrap}th{color:var(--text)}
+.th{color:var(--violet)}.ok{color:var(--green)}.bad{color:#f87171}
+.eq{font-family:var(--mono);font-size:.8rem;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.5rem 0;overflow-x:auto;white-space:pre-wrap;line-height:1.7}
+canvas{width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:var(--bg);display:block;margin-top:.5rem}
+footer{padding:1.5rem 0;color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);margin-top:1.5rem}
+</style></head>
+<body><div class="wrap">
+<header><a href="index.html" class="prompt">← ~/sapienza/cybersecurity</a>
+<h1>HW 05 · <span>Riemann</span> vs <span>Lebesgue</span> and the normal CDF</h1>
+<p>Alessandro Bertoldi · Statistics in Cybersecurity. Exercise 1: numerical integration by partitioning the domain (Riemann) or the range (Lebesgue). Exercise 2: computing Φ(x) numerically.</p></header>
+
+<div class="part">Exercise 1</div>
+<section><h2><small>01</small>Two ways to cut the area</h2>
+<ul><li><b>Riemann-inspired.</b> Partition the domain [a,b] into N subintervals of width h and add f(tag)·h. Variants: left endpoint, midpoint, trapezoid.</li>
+<li><b>Lebesgue-inspired.</b> Partition the <i>range</i> into K levels of height δ = Y/K (Y = sup f) and add up level × measure of the preimage. For f ≥ 0 this is the layer-cake sum</li></ul>
+<div class="eq">L_K = Σ_{j=1..K} δ · μ({x : f(x) ≥ jδ}) = ∫ δ·floor(f/δ) dμ  ≤  ∫ f dμ,     error ≤ δ·(b−a)</div>
+<ul><li><b>Exact preimage</b>: μ({f ≥ y}) from a formula (or a root-finding step for sin x / x). <b>Sampled preimage</b>: for a generic f, evaluate f on N sample points, sort the values, and estimate μ({f ≥ y}) by the fraction of values ≥ y, which is cheap (O(N log N)) but is in fact a Riemann sum in disguise.</li>
+<li>For 1/√x the range is unbounded, so the levels are truncated at Y = √K, which balances the two error terms (δ = Y/K and the tail 1/Y).</li></ul></section>
+
+<section><h2><small>02</small>Results for one function</h2>
+<div class="row"><div style="flex:2"><label>function</label><select id="fsel"></select></div>
+<div style="flex:2"><label>N (= number of subintervals = number of levels K)</label><input id="ns" value="10, 100, 1000, 10000, 100000"></div></div>
+<button onclick="runOne()">Run</button><button onclick="runAll()">Compare all functions at N = 1000</button>
+<div id="o1"></div></section>
+
+<section><h2><small>03</small>Pathological functions</h2>
+<p><b>Dirichlet</b> (1 on rationals, 0 on irrationals): every subinterval contains both kinds of points, so the upper Darboux sum is 1 and the lower one is 0 for any partition: <b>not Riemann integrable</b>. The rationals are countable, hence have measure 0, so every preimage {f ≥ y} (0 &lt; y ≤ 1) has measure 0 and the <b>Lebesgue integral is 0</b>. <b>Thomae</b> (1/q at p/q in lowest terms, 0 at irrationals): continuous at every irrational, discontinuous only on the rationals (measure 0), so it <b>is Riemann integrable</b> (Lebesgue's criterion) and both integrals are 0.</p>
+<p>Floating-point numbers are all rational, so a program cannot test rationality; the tags are therefore modeled exactly: a rational tag k/N, or an irrational tag (k + √2/2)/N.</p>
+<button onclick="path()">Run pathological examples</button><div id="o3"></div></section>
+
+<section><h2><small>04</small>Discussion</h2>
+<ul><li><b>Same value?</b> For Riemann-integrable functions (bounded and continuous almost everywhere) the Lebesgue integral exists and equals the Riemann integral, and both numerical schemes converge to it: the tables show the same limit for sin x, x², |x−½|, the step functions and sin x / x. Differences are in <i>how</i> they converge, not where.</li>
+<li><b>Different behaviors.</b> 1/√x is unbounded: Riemann sums need an improper-integral limit (left and trapezoid sums fail at x = 0, the midpoint converges slowly, as 1/√N), while the Lebesgue integral exists directly and is 2. The Dirichlet function has no Riemann integral at all but a Lebesgue integral equal to 0. For Thomae both exist and are 0, though a Riemann sum with rational tags is positive for finite N and only tends to 0.</li>
+<li><b>Accuracy and convergence.</b> Smooth functions: midpoint and trapezoid errors scale like 1/N² and the left sum like 1/N. A jump costs a Riemann sum O(1/N) (one wrong cell). Lebesgue error is O(δ) = O(1/K) for <i>any</i> bounded f, smooth or not, because it depends on the range partition only; the sampled version also carries the sampling error of the preimage measure.</li>
+<li><b>Efficiency.</b> Riemann: N function evaluations and no extra knowledge. Lebesgue with exact preimages: K cheap evaluations of μ but requires solving f(x) = y analytically or by root finding (about 50 function calls per level for sin x / x). Without that, the sampled version costs O(N log N) for the sort. Lebesgue's advantage is conceptual and theoretical: it handles wild functions and limits (monotone and dominated convergence), not speed.</li></ul></section>
+
+<div class="part">Exercise 2</div>
+<section><h2><small>05</small>Why Φ is not elementary</h2>
+<div class="eq">Φ(x) = ∫_{−∞}^{x} φ(t) dt,   φ(t) = e^{−t²/2}/√(2π)</div>
+<p><b>Liouville's theorem</b> (1835; Rosenlicht's form): let f and g be rational functions. Then ∫ f(x)·e^{g(x)} dx is an elementary function if and only if there exists a <i>rational</i> function R with</p>
+<div class="eq">R′(x) + g′(x)·R(x) = f(x),   and then   ∫ f e^g dx = R(x)·e^{g(x)}</div>
+<p><b>Application.</b> Here f = 1 and g = −x²/2, so we would need a rational R with R′ − xR = 1. (i) If R had a pole at a of order k ≥ 1, R′ would have a pole of order k+1 there, while xR has order k, so R′ − xR could not equal 1. (ii) So R is a polynomial of degree d; then R′ − xR has degree d+1 ≥ 1 (leading term −c·x^{d+1}) but must equal the constant 1: contradiction (if R = 0 the left side is 0, not 1). Hence ∫ e^{−x²/2} dx is <b>not elementary</b>: no finite combination of polynomials, exp, log, roots and trigonometric functions gives Φ.</p>
+<p><b>A note on wording.</b> "The integrand has no antiderivative" is imprecise: antiderivatives exist (Φ itself is one), they are just not elementary. The course notes (Hogg–McKean–Craig §3.4) give one as a power series, obtained by integrating the series of e^{−x²/2} term by term (allowed by its absolute convergence):</p>
+<div class="eq">Φ(x) = ½ + (1/√(2π)) · Σ_{k≥0} (−1)^k · x^{2k+1} / (2^k · (2k+1) · k!)</div>
+<p>It is an alternating series, so the Alternating Series Estimation Theorem bounds the truncation error by the first omitted term (checked numerically below), and symmetry Φ(−z) = 1 − Φ(z) gives negative arguments. The normalizing constant comes from (∫e^{−x²}dx)² = ∫∫e^{−(x²+y²)}dx dy = π in polar coordinates. Reference for Liouville's result: M. Rosenlicht, <i>Integration in Finite Terms</i>, Amer. Math. Monthly 79 (1972).</p>
+<p><b>Special function.</b> The error function is defined by erf(z) = (2/√π)·∫₀^z e^{−t²} dt (DLMF §7.2), and it is essentially the standard normal CDF up to scaling and translation, which gives the exact analytic representation</p>
+<div class="eq">Φ(x) = ½ · [ 1 + erf( x/√2 ) ] = ½ · erfc( −x/√2 )</div>
+<p>This is an exact identity, but erf is only <i>defined</i> by an integral (or an infinite series): the name does not tell us how to get a number. Processors have no erf instruction, so every implementation still needs a numerical method: integration, a power series, a continued fraction, or a fitted approximation. The problem is moved, not removed.</p></section>
+
+<section><h2><small>06</small>Numerical methods compared with a trusted reference</h2>
+<ul><li><b>Trapezoid / Simpson</b> on ∫₀^x φ, then Φ = ½ + integral (N panels).</li>
+<li><b>erf power series</b>: erf(z) = (2/√π) Σ (−1)ⁿ z^{2n+1}/(n!(2n+1)), Φ = ½(1 + erf(x/√2)). The terms alternate and grow like e^{z²} before shrinking: cancellation for large |x|.</li>
+<li><b>Kummer series</b>: Φ(x) = ½ + φ(x)·Σ x^{2n+1}/(1·3·5⋯(2n+1)): same function, all terms of the same sign, so no cancellation.</li>
+<li><b>Polynomial approximation</b> Abramowitz–Stegun 26.2.17 (|error| &lt; 7.5·10⁻⁸): one exponential and a degree-5 polynomial.</li>
+<li><b>Hybrid</b>: Kummer series for |x| &lt; 2 and the continued fraction for the Mills ratio Q(x) = φ(x)/(x + 1/(x + 2/(x + 3/(x + …)))) for the tails, which keeps full relative accuracy there.</li></ul>
+<p>Reference: values computed with arbitrary precision (mpmath, 40 digits, Φ = ½ erfc(−x/√2) with erfc as in NIST DLMF §7.2) and rounded to double precision. Integration panels:</p>
+<div class="row"><div style="max-width:160px"><label>N panels (trapezoid / Simpson)</label><input id="np" type="number" value="1000" min="2" step="2"></div>
+<div style="max-width:200px"><label>test point x</label><input id="xt" type="number" value="1.96" step="0.01"></div></div>
+<button onclick="accTable()">Accuracy at test points</button><button onclick="bench()">Efficiency benchmark</button><button onclick="conv()">Convergence at test point x</button>
+<div id="o2"></div></section>
+
+<section><h2><small>07</small>Z-scores and the 68–95–99.7 rule</h2>
+<p>For X ~ N(μ, σ²) the course notes use z = (x − μ)/σ, so that P(X ≤ x) = Φ(z), and the symmetry Φ(−z) = 1 − Φ(z). The probability within k standard deviations is P(μ − kσ &lt; X &lt; μ + kσ) = 2Φ(k) − 1.</p>
+<div class="row"><div><label>μ</label><input id="zm" type="number" value="100" step="any"></div><div><label>σ</label><input id="zs" type="number" value="15" step="any" min="0.0001"></div><div><label>x</label><input id="zx" type="number" value="130" step="any"></div></div>
+<button onclick="zsc()">Standardize and compute</button><div id="o4"></div></section>
+
+<section><h2><small>08</small>Conclusions</h2>
+<ul><li>No elementary antiderivative exists for e^{−x²/2} (Liouville), but erf gives an exact definition; it still has to be computed numerically.</li>
+<li>Trapezoid converges like 1/N² and Simpson like 1/N⁴ until the rounding floor (~10⁻¹⁶); series converge geometrically after about x² terms; the polynomial approximation is the fastest but stops at about 10⁻⁷.</li>
+<li>Absolute error is not enough: in the tails Φ(−8) ≈ 6·10⁻¹⁶, so a method with absolute error 10⁻¹⁶ has 100% relative error. Methods that compute 1 − Φ or ½ − ∫ lose all digits there, while the continued fraction keeps full relative accuracy. Choose the method according to the range of x and to the accuracy that the application needs.</li></ul></section>
+<footer>© 2026 Alessandro Bertoldi · All computations run in your browser (double precision).</footer>
+</div>
+<script>
+//CORE
+const sinc=x=>x===0?1:Math.sin(x)/x;
+const FN=[
+{id:'sin',name:'sin(x) on [0, π]',a:0,b:Math.PI,f:Math.sin,exact:2,ymax:1,mu:y=>y<=0?Math.PI:y>1?0:Math.PI-2*Math.asin(y)},
+{id:'sq',name:'x² on [0, 1]',a:0,b:1,f:x=>x*x,exact:1/3,ymax:1,mu:y=>y<=0?1:y>1?0:1-Math.sqrt(y)},
+{id:'st3',name:'1 if x<0.5, 3 if x≥0.5',a:0,b:1,f:x=>x<.5?1:3,exact:2,ymax:3,mu:y=>y<=1?1:y<=3?.5:0},
+{id:'abs',name:'|x − 0.5| on [0, 1]',a:0,b:1,f:x=>Math.abs(x-.5),exact:.25,ymax:.5,mu:y=>y<=0?1:y>.5?0:1-2*y},
+{id:'isq',name:'1/√x on (0, 1]  (unbounded)',a:0,b:1,f:x=>x===0?Infinity:1/Math.sqrt(x),exact:2,ymax:Infinity,mu:y=>y<=0?1:Math.min(1,1/(y*y))},
+{id:'st1',name:'1 if x<0.5, 0 if x≥0.5',a:0,b:1,f:x=>x<.5?1:0,exact:.5,ymax:1,mu:y=>y<=0?1:y<=1?.5:0},
+{id:'sinc',name:'sin(x)/x on [0, π]',a:0,b:Math.PI,f:sinc,exact:1.8519370519824662,ymax:1,mu:y=>{if(y<=0)return Math.PI;if(y>1)return 0;let lo=0,hi=Math.PI;for(let i=0;i<50;i++){const m=(lo+hi)/2;if(sinc(m)>=y)lo=m;else hi=m}return lo}}];
+function riemann(fn,N,kind){const{a,b,f}=fn,h=(b-a)/N;let s=0;
+if(kind=='L'){for(let i=0;i<N;i++)s+=f(a+i*h)}else if(kind=='M'){for(let i=0;i<N;i++)s+=f(a+(i+.5)*h)}else{s=(f(a)+f(b))/2;for(let i=1;i<N;i++)s+=f(a+i*h)}return s*h}
+function lebA(fn,K){const Y=isFinite(fn.ymax)?fn.ymax:Math.sqrt(K),d=Y/K;let s=0;for(let j=1;j<=K;j++)s+=fn.mu(j*d);return s*d}
+function lebS(fn,N,K){const{a,b,f}=fn,h=(b-a)/N,v=new Float64Array(N);for(let i=0;i<N;i++)v[i]=f(a+(i+.5)*h);v.sort();
+const Y=isFinite(fn.ymax)?fn.ymax:Math.sqrt(K),d=Y/K;let s=0;for(let j=1;j<=K;j++){const y=j*d;let lo=0,hi=N;while(lo<hi){const m=(lo+hi)>>1;if(v[m]>=y)hi=m;else lo=m+1}s+=(N-lo)*h}return s*d}
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+function thomaSums(N){let rat=1;for(let k=1;k<N;k++)rat+=gcd(k,N)/N;rat/=N;let up=0;
+for(let k=0;k<N;k++){let q=1;while(Math.floor(((k+1)*q)/N)<Math.ceil((k*q)/N))q++;up+=1/q}return{rat,up:up/N}}
+// ---- normal CDF ----
+const SQ2PI=Math.sqrt(2*Math.PI),phi=x=>Math.exp(-x*x/2)/SQ2PI;
+function phiTrap(x,N){const h=x/N;let s=(phi(0)+phi(x))/2;for(let i=1;i<N;i++)s+=phi(i*h);return .5+s*h}
+function phiSimp(x,N){const h=x/N;let s=phi(0)+phi(x);for(let i=1;i<N;i++)s+=(i&1?4:2)*phi(i*h);return .5+s*h/3}
+function erfSeries(z){let t=z,s=z;for(let n=1;n<600;n++){t*=-z*z/n;const d=t/(2*n+1);s+=d;if(Math.abs(d)<1e-18*Math.abs(s)&&n>z*z)break}return 2/Math.sqrt(Math.PI)*s}
+const phiErf=x=>.5*(1+erfSeries(x/Math.SQRT2));
+function phiKummer(x){let t=x,s=x,n=1;while(Math.abs(t)>1e-18*Math.abs(s)&&n<4000){n+=2;t*=x*x/n;s+=t}return .5+phi(x)*s}
+function phiAS(x){const ax=Math.abs(x),t=1/(1+.2316419*ax),p=t*(.319381530+t*(-.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));const q=phi(ax)*p;return x>=0?1-q:q}
+function phiCF(x){let f=x;for(let k=300;k>=1;k--)f=x+k/f;return phi(x)/f}
+function phiBest(x){const ax=Math.abs(x);if(ax<2)return phiKummer(x);const q=phiCF(ax);return x>0?1-q:q}
+const REF=[[-8,"6.220960574271784123516e-16"],[-5,"2.866515718791939116738e-7"],[-3,"0.001349898031630094526652"],[-2,"0.02275013194817920720028"],[-1,"0.1586552539314570514148"],[-0.5,"0.3085375387259868963623"],[0,"0.5"],[0.5,"0.6914624612740131036377"],[1,"0.8413447460685429485852"],[1.96,"0.9750021048517795658634"],[2,"0.9772498680518207927997"],[3,"0.9986501019683699054733"],[4,"0.9999683287581668800787"],[5,"0.9999997133484281208061"],[6,"0.9999999990134123549623"],[8,"0.9999999999999993779039"]];
+function erfPartials(x,M){const z=x/Math.SQRT2;let t=z,s=z;const o=[];for(let n=0;n<M;n++){if(n>0){t*=-z*z/n;s+=t/(2*n+1)}o.push(.5*(1+2/Math.sqrt(Math.PI)*s))}return o}
+function kumPartials(x,M){let t=x,s=x;const o=[];for(let n=0;n<M;n++){if(n>0){t*=x*x/(2*n+1);s+=t}o.push(.5+phi(x)*s)}return o}
+function notesPartials(x,M){const o=[];let s=0,t=x;for(let k=0;k<M;k++){s+=t/(2*k+1);o.push({phi:.5+s/SQ2PI,bound:Math.abs(t*(-x*x/(2*(k+1)))/(2*k+3))/SQ2PI});t*=-x*x/(2*(k+1))}return o}
+//ENDCORE
+const $=i=>document.getElementById(i);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const e=(x,d=2)=>x===0?'0':!Number.isFinite(x)?'∞':x.toExponential(d);
+const v6=x=>Number.isFinite(x)?x.toPrecision(10):'∞';
+FN.forEach(f=>$('fsel').insertAdjacentHTML('beforeend',`<option value="${f.id}">${f.name}</option>`));
+const COL=()=>[css('--green'),css('--violet'),'#fbbf24','#60a5fa','#f87171'];
+function plotLL(cv,xs,series){const c=cv.getContext('2d'),W=cv.width,Hh=cv.height,lx=Math.log10,cl=v=>Number.isFinite(v)&&v>1e-17?v:1e-17,all=series.flatMap(s=>s.ys.map(cl)),
+x0=lx(xs[0]),x1=lx(xs[xs.length-1]),y0=lx(Math.min(...all))-.2,y1=lx(Math.max(...all))+.2,X=x=>46+(lx(x)-x0)/((x1-x0)||1)*(W-60),Y=v=>Hh-26-(lx(cl(v))-y0)/(y1-y0)*(Hh-40);c.clearRect(0,0,W,Hh);
+c.strokeStyle=css('--line');c.lineWidth=1;for(let p=Math.ceil(y0);p<=y1;p++){c.beginPath();c.moveTo(44,Y(10**p));c.lineTo(W-6,Y(10**p));c.stroke();c.fillStyle=css('--muted');c.font='10px sans-serif';c.textAlign='right';c.fillText('1e'+p,40,Y(10**p)+3)}
+series.forEach(s=>{c.strokeStyle=s.col;c.fillStyle=s.col;c.lineWidth=1.6;c.beginPath();xs.forEach((x,i)=>i?c.lineTo(X(x),Y(s.ys[i])):c.moveTo(X(x),Y(s.ys[i])));c.stroke();xs.forEach((x,i)=>{c.beginPath();c.arc(X(x),Y(s.ys[i]),2.5,0,7);c.fill()})});
+c.textAlign='center';c.fillStyle=css('--muted');xs.forEach((x,i)=>{if(xs.length<9||i%2==0)c.fillText(x,X(x),Hh-10)});c.textAlign='left';series.forEach((s,i)=>{c.fillStyle=s.col;c.fillText('● '+s.name,56+ (i%3)*200,12+Math.floor(i/3)*13)})}
+const METH=[['Riemann left',(fn,N)=>riemann(fn,N,'L')],['Riemann midpoint',(fn,N)=>riemann(fn,N,'M')],['Trapezoid',(fn,N)=>riemann(fn,N,'T')],['Lebesgue (exact preimage)',(fn,N)=>lebA(fn,N)],['Lebesgue (sampled preimage)',(fn,N)=>lebS(fn,N,N)]];
+function runOne(){const fn=FN.find(f=>f.id==$('fsel').value),Ns=[...new Set($('ns').value.split(/[ ,;]+/).map(Number).filter(v=>Number.isInteger(v)&&v>=2&&v<=2e6))].sort((a,b)=>a-b).slice(0,7);if(!Ns.length)return;
+const res=Ns.map(N=>METH.map(([n,m])=>{const t=performance.now(),v=m(fn,N);return{v,err:Math.abs(v-fn.exact),t:performance.now()-t}}));
+let h=`<p><b>${fn.name}</b>: exact value = ${fn.exact.toPrecision(12)}</p><div class="scroll"><table><tr><th>N</th>${METH.map(m=>`<th>${m[0]}<br>|error|</th>`).join('')}</tr>`;
+Ns.forEach((N,i)=>h+=`<tr><td>${N}</td>${res[i].map(r=>`<td title="value ${v6(r.v)}">${e(r.err)}</td>`).join('')}</tr>`);
+h+=`</table></div><p>Time for N = ${Ns[Ns.length-1]}: ${METH.map((m,j)=>`${m[0]} <b>${res[res.length-1][j].t.toFixed(1)} ms</b>`).join(' · ')}</p><canvas id="c1" width="760" height="280"></canvas>
+<p>Log-log plot of the absolute error against N (a missing curve means the method fails: infinite or zero error). ${fn.id=='isq'?'Left and trapezoid sums are infinite at x = 0; the midpoint and Lebesgue errors fall only like N<sup>−1/2</sup>.':''}</p>`;$('o1').innerHTML=h;
+plotLL($('c1'),Ns,METH.map((m,j)=>({name:m[0],col:COL()[j],ys:res.map(r=>r[j].err)})))}
+function runAll(){const N=1000;let h=`<div class="scroll"><table><tr><th>function</th><th>exact</th><th>Riemann midpoint</th><th>Lebesgue (exact preimage)</th><th>Lebesgue (sampled)</th></tr>`;
+FN.forEach(fn=>{const r=[riemann(fn,N,'M'),lebA(fn,N),lebS(fn,N,N)];h+=`<tr><td>${fn.name}</td><td>${fn.exact.toPrecision(8)}</td>${r.map(v=>`<td>${v.toPrecision(8)} <span class="th">(${e(Math.abs(v-fn.exact),1)})</span></td>`).join('')}</tr>`});
+$('o1').innerHTML=h+`</table></div><p>N = K = 1000 for every function. All three approaches approach the same exact value, with error in parentheses.</p>`}
+function path(){const Ns=[10,50,100,500,1000,5000];let h=`<h3>Dirichlet function</h3><div class="scroll"><table><tr><th>N</th><th>Riemann, rational tags</th><th>Riemann, irrational tags</th><th>lower Darboux</th><th>upper Darboux</th><th>Lebesgue</th></tr>`;
+Ns.forEach(N=>h+=`<tr><td>${N}</td><td>1</td><td>0</td><td>0</td><td>1</td><td class="ok">0</td></tr>`);
+h+=`</table></div><p>The Riemann sums depend on the choice of tags and never converge; upper and lower sums never meet. The Lebesgue sum is Σ y_j·μ(preimage) = Σ y_j·0 = 0 for every K.</p><h3>Thomae function</h3><div class="scroll"><table><tr><th>N</th><th>Riemann, rational tags (left)</th><th>Riemann, irrational tags</th><th>lower Darboux</th><th>upper Darboux</th><th>Lebesgue</th></tr>`;
+Ns.forEach(N=>{const t=thomaSums(N);h+=`<tr><td>${N}</td><td>${t.rat.toFixed(6)}</td><td>0</td><td>0</td><td>${t.up.toFixed(6)}</td><td class="ok">0</td></tr>`});
+$('o3').innerHTML=h+`</table></div><p>Here upper and lower Darboux sums do squeeze to 0 (slowly: about 1/√N in these runs), so the Riemann integral exists and equals the Lebesgue one. The preimage {f ≥ y} is a finite set for each y &gt; 0, with measure 0.</p>`}
+const PT=()=>REF.map(([x,s])=>({x,ref:Number(s)}));
+function mArr(N){return[['Trapezoid',x=>phiTrap(x,N)],['Simpson',x=>phiSimp(x,N)],['erf series',phiErf],['Kummer series',phiKummer],['A&S 26.2.17',phiAS],['Hybrid + CF',phiBest]]}
+function accTable(){const N=Math.max(2,2*Math.round((+$('np').value||1000)/2)),M=mArr(N),P=PT();
+let h=`<p>Trapezoid and Simpson with N = ${N} panels. Cells: absolute error (relative error).</p><div class="scroll"><table><tr><th>x</th><th>reference Φ(x)</th>${M.map(m=>`<th>${m[0]}</th>`).join('')}</tr>`;
+P.forEach(p=>{h+=`<tr><td>${p.x}</td><td>${p.ref.toPrecision(15)}</td>${M.map(m=>{const v=m[1](p.x),a=Math.abs(v-p.ref),r=a/p.ref,bad=r>1e-3;return`<td class="${bad?'bad':''}">${e(a,1)} <span class="th">(${e(r,1)})</span></td>`}).join('')}</tr>`});
+$('o2').innerHTML=h+`</table></div><p>Red: relative error above 10⁻³. The erf power series breaks down for |x| ≥ 5 (huge alternating terms), the series and the integrals have absolute errors of about 10⁻¹⁶ but lose relative accuracy in the far tail (Φ(−8) ≈ 6·10⁻¹⁶); A&amp;S is limited to about 10⁻⁷; the hybrid keeps about 10⁻¹⁶ relative error everywhere.</p>`}
+function bench(){$('o2').innerHTML='<p>running…</p>';setTimeout(()=>{const M=mArr(200),pts=Array.from({length:2001},(_,i)=>-6+i*.006);let h=`<p>2001 points in [−6, 6]; trapezoid and Simpson use N = 200 panels. Reference for the accuracy columns: the hybrid method, which was checked against the 40-digit reference table.</p><div class="scroll"><table><tr><th>method</th><th>µs per evaluation</th><th>max absolute error</th><th>max relative error for x ≤ −3</th></tr>`;
+M.forEach((m,j)=>{const reps=j<2?3:100;let t=performance.now(),s=0;for(let r=0;r<reps;r++)for(const x of pts)s+=m[1](x);t=performance.now()-t;let ea=0,er=0;for(const x of pts){const rf=phiBest(x),a=Math.abs(m[1](x)-rf);ea=Math.max(ea,a);if(x<=-3)er=Math.max(er,a/rf)}
+h+=`<tr><td>${m[0]}</td><td>${(t*1000/(reps*pts.length)).toFixed(2)}</td><td>${e(ea,1)}</td><td>${e(er,1)}</td></tr>`});$('o2').innerHTML=h+`</table></div><p>The cost of integration grows with the number of panels (O(N)), series need a number of terms of the order of x² plus a few dozen, and the polynomial approximation is O(1) with the worst accuracy (~10⁻⁷).</p>`},30)}
+function conv(){const x=+$('xt').value||1.96,rf=phiBest(x),Ns=[2,4,8,16,32,64,128,256,512,1024],et=Ns.map(N=>Math.abs(phiTrap(x,N)-rf)),es=Ns.map(N=>Math.abs(phiSimp(x,N)-rf)),
+Ms=[1,2,4,6,8,10,15,20,30,40,60],pe=erfPartials(x,70),pk=kumPartials(x,70),ee=Ms.map(n=>Math.abs(pe[n-1]-rf)),ek=Ms.map(n=>Math.abs(pk[n-1]-rf));
+const sl=(a)=>{const i=a.findIndex(v=>v<1e-12);const k=i<0?a.length-1:Math.max(2,i);return(Math.log10(a[0])-Math.log10(a[k-1]))/(Math.log10(Ns[k-1])-Math.log10(Ns[0]))};
+$('o2').innerHTML=`<p>Φ(${x}) ≈ ${rf.toPrecision(16)} (hybrid method).</p><h3>Integration error against the number of panels N</h3><canvas id="c2" width="760" height="260"></canvas>
+<p>Observed order: trapezoid ≈ ${sl(et).toFixed(1)} (theory 2), Simpson ≈ ${sl(es).toFixed(1)} (theory 4); the curve flattens at the rounding level ~10⁻¹⁶.</p><h3>Series error against the number of terms</h3><canvas id="c3" width="760" height="260"></canvas>
+<p>Both series converge factorially fast once the number of terms exceeds roughly x². For larger |x| the erf series passes through enormous intermediate terms and loses accuracy, while the Kummer series does not.</p>`;
+const np=notesPartials(x,14);let tb=`<h3>Alternating-series error bound (series of the course notes)</h3><div class="scroll"><table><tr><th>terms n</th><th>partial sum</th><th>|error|</th><th>first omitted term (bound)</th><th>error ≤ bound?</th></tr>`;
+np.forEach((q,i)=>{const err=Math.abs(q.phi-rf),dec=q.bound<(i>0?np[i-1].bound:Infinity);tb+=`<tr><td>${i+1}</td><td>${q.phi.toPrecision(12)}</td><td>${e(err)}</td><td>${e(q.bound)}</td><td>${dec?(err<=q.bound*(1+1e-9)+1e-16?'<span class="ok">yes</span>':'<span class="bad">no</span>'):'terms still growing'}</td></tr>`});
+$('o2').insertAdjacentHTML('beforeend',tb+'</table></div><p>The theorem applies once the terms decrease in absolute value; from then on the error is below the first neglected term, so the number of terms for a target accuracy is known in advance.</p>');
+plotLL($('c2'),Ns,[{name:'Trapezoid',col:css('--green'),ys:et},{name:'Simpson',col:css('--violet'),ys:es}]);plotLL($('c3'),Ms,[{name:'erf Taylor series',col:css('--green'),ys:ee},{name:'Kummer series',col:css('--violet'),ys:ek}])}
+function zsc(){const m=+$('zm').value,sg=+$('zs').value,x=+$('zx').value;if(!(sg>0))return;const z=(x-m)/sg,pk=[[1,.6826],[2,.9544],[3,.9974]];
+let h=`<p>z = (x − μ)/σ = <b>${z.toPrecision(6)}</b> · P(X ≤ x) = Φ(z) = <b>${phiBest(z).toPrecision(12)}</b> · P(X &gt; x) = Φ(−z) = <b>${phiBest(-z).toPrecision(12)}</b> (computed directly with the tail-safe method, not as 1 − Φ(z)).</p>
+<div class="scroll"><table><tr><th>k</th><th>P(μ−kσ &lt; X &lt; μ+kσ) = 2Φ(k) − 1</th><th>value in the notes (4 digits)</th></tr>`;
+pk.forEach(([k,r])=>h+=`<tr><td>${k}</td><td>${(2*phiBest(k)-1).toPrecision(12)}</td><td>${r}</td></tr>`);$('o4').innerHTML=h+'</table></div>'}
+runOne();path();accTable();zsc();
+</script></body></html>
