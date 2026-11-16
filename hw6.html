@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW 06 · Statistical independence and the chi-square test · Alessandro Bertoldi</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b1110;--panel:#121b19;--line:#233230;--text:#e6f1ee;--muted:#8aa39d;--green:#34d399;--violet:#a78bfa;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Fira Code',ui-monospace,monospace}
+@media (prefers-color-scheme:light){:root{--bg:#f4f8f6;--panel:#fff;--line:#d3e0db;--text:#10211c;--muted:#58716a;--green:#059669;--violet:#7c3aed}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding:0 1.1rem}
+a{color:var(--green);text-decoration:none}
+header{padding:2.5rem 0 1rem}.prompt{font-family:var(--mono);font-size:.8rem;color:var(--green)}
+h1{font-size:clamp(1.7rem,5vw,2.5rem);letter-spacing:-.03em;line-height:1.1;margin:.5rem 0}h1 span{color:var(--violet)}
+h2{font-size:1.2rem;margin:0 0 .6rem}h2 small{font-family:var(--mono);color:var(--muted);font-size:.7rem;margin-right:.5rem}h3{font-size:.98rem;margin:1.1rem 0 .3rem}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;margin:1.1rem 0}
+p,li{font-size:.92rem;color:var(--muted)}p{margin:.4rem 0}li{margin-left:1.1rem}b{color:var(--text);font-weight:500}
+input,button,select,textarea{font:inherit;font-size:.85rem;padding:.4rem .6rem;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);width:100%}
+textarea{font-family:var(--mono);font-size:.74rem;min-height:130px;max-height:260px}
+input[type=checkbox]{width:auto;margin-right:.4rem}
+button{width:auto;cursor:pointer;border-color:var(--green);color:var(--green);margin:.4rem .4rem 0 0}button:hover{background:color-mix(in srgb,var(--green) 12%,var(--bg))}
+label{font-size:.72rem;color:var(--muted);font-family:var(--mono)}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:flex-end}.row>div{flex:1;min-width:120px}
+.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:.8rem;margin:.3rem 0}td,th{border:1px solid var(--line);padding:.3rem .55rem;text-align:right;color:var(--muted);white-space:nowrap}th{color:var(--text)}th:first-child,td:first-child{text-align:left}
+tr.tot td,td.tot{color:var(--text);font-weight:500}
+.eq{font-family:var(--mono);font-size:.8rem;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.6rem .8rem;margin:.5rem 0;overflow-x:auto;white-space:pre-wrap;line-height:1.7}
+.ok{color:var(--green)}.bad{color:#f87171}.th{color:var(--violet)}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+canvas{width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:var(--bg);display:block;margin-top:.4rem}
+.verdict{border-left:3px solid var(--green);padding:.4rem .9rem;margin:.8rem 0;background:var(--bg);border-radius:0 8px 8px 0}
+footer{padding:1.5rem 0;color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);margin-top:1.5rem}
+</style></head>
+<body><div class="wrap">
+<header><a href="index.html" class="prompt">← ~/sapienza/cybersecurity</a>
+<h1>HW 06 · Statistical <span>independence</span></h1>
+<p>Alessandro Bertoldi · Statistics in Cybersecurity. From a bivariate dataset (X, F) to the contingency table, marginal and conditional frequencies, expected counts under independence, the χ² statistic and its p-value.</p></header>
+
+<section><h2><small>01</small>Independence: theory in brief</h2>
+<ul><li><b>Events.</b> A and B are independent if P(A ∩ B) = P(A)·P(B), equivalently P(A | B) = P(A) when P(B) &gt; 0: knowing B does not change the probability of A.</li>
+<li><b>Discrete variables.</b> X and F are independent if and only if the joint pmf factorizes into the marginals, p<sub>ij</sub> = p<sub>i·</sub>·p<sub>·j</sub> for every pair (i, j). Equivalently every conditional distribution P(F | X = xᵢ) equals the marginal P(F): the rows of the contingency table are proportional.</li>
+<li><b>Expected counts under independence.</b> E<sub>ij</sub> = n·p<sub>i·</sub>·p<sub>·j</sub> = R<sub>i</sub>·C<sub>j</sub>/n, where R<sub>i</sub> and C<sub>j</sub> are the row and column totals and n the sample size.</li></ul>
+<div class="eq">χ² = Σᵢ Σⱼ (O<sub>ij</sub> − E<sub>ij</sub>)² / E<sub>ij</sub>      df = (r − 1)(c − 1)      p-value = P(χ²<sub>df</sub> ≥ observed | H₀)
+Cramér's V = √( χ² / ( n · min(r − 1, c − 1) ) )      adjusted residual = (O − E) / √( E (1 − R/n)(1 − C/n) )</div>
+<p>H₀: X and F are independent; H₁: they are associated (in any way). Under H₀ the statistic is approximately χ² distributed with df degrees of freedom (the marginals are estimated from the data, so df = rc − 1 − (r − 1) − (c − 1)). Conditions: independent observations, and expected counts that are not too small (rule of thumb: all E ≥ 1 and at least 80% of them ≥ 5; otherwise use exact or Monte Carlo tests). The p-value is computed from the regularized incomplete gamma function, Q(df/2, χ²/2), implemented from scratch. As an optional extra, a <b>permutation test</b> shuffles the F labels and gives a p-value without the asymptotic approximation.</p></section>
+
+<section><h2><small>02</small>Dataset</h2>
+<div class="row"><div style="flex:2"><label>dataset</label><select id="pre" onchange="loadPre()"><option value="train">Security training × phishing outcome (dependent)</option><option value="day">Weekday/weekend × intrusion (looks independent)</option><option value="os">Operating system × infection (significant but weak, n = 6000)</option><option value="custom">Custom data</option></select></div>
+<div><label>significance α</label><input id="al" type="number" value="0.05" step="0.01" min="0.001" max="0.5"></div>
+<div><label>permutations (0 = skip)</label><input id="B" type="number" value="2000" min="0" max="20000"></div>
+<div><label>seed</label><input id="seed" type="number" value="7"></div></div>
+<label style="display:block;margin-top:.5rem">records, one per line as <code>x,f</code> (comma, semicolon or tab; any labels)</label><textarea id="dat" spellcheck="false"></textarea>
+<label><input type="checkbox" id="hdr" checked>first line is a header (variable names)</label><br>
+<button onclick="run()">Run analysis</button><p id="msg"></p></section>
+
+<section><h2><small>03</small>Results</h2><div id="out"><p>Press "Run analysis".</p></div></section>
+
+<section><h2><small>04</small>Interpretation: association is not causation</h2>
+<ul><li><b>What the test says.</b> A small p-value (below α) is evidence <i>against</i> independence: the observed table would be unlikely if X and F were independent. A large p-value only says that the data are compatible with independence; it does not prove it, because the sample may be too small to detect a real association (low power).</li>
+<li><b>Significance is not importance.</b> With large n a tiny deviation becomes significant. Cramér's V measures the strength: about 0.1 small, 0.3 medium, 0.5 large (for 2×2 tables). The third dataset is significant yet nearly negligible; the first one is both significant and moderately strong.</li>
+<li><b>Where the dependence comes from.</b> The adjusted residuals show which cells have more (positive) or fewer (negative) observations than independence predicts; values beyond about ±2 are notable.</li>
+<li><b>Association vs causality.</b> Statistical dependence says only that the variables move together. It does not say that X causes F. A <i>confounder</i> can drive both (employees who got training may also work in teams with better security practices), the direction can be <i>reversed</i> (organisations that suffered incidents may then invest in training), and <i>Simpson's paradox</i> can make an association appear, vanish or flip when a third variable is taken into account. Causal claims require a randomized experiment or an explicit causal model; an observational χ² test cannot provide them. Conversely, independence in a table is not proof of no causal effect either (effects can cancel across subgroups).</li>
+<li><b>Other cautions.</b> The test assumes independent records and an adequate sample; continuous variables must be binned (which loses information); testing many pairs of variables inflates false positives.</li></ul></section>
+<footer>© 2026 Alessandro Bertoldi · Everything runs in your browser; no data leaves the page.</footer>
+</div>
+<script>
+//CORE
+function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+const srt=a=>a.every(v=>isFinite(+v))?a.sort((p,q)=>p-q):a.sort((p,q)=>p<q?-1:p>q?1:0);
+function parseData(text,header){const L=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);let names=['X','F'];if(header&&L.length){const h=L.shift().split(/[,;\t]/).map(s=>s.trim());names=[h[0]||'X',h[1]||'F']}
+const pairs=[];for(const l of L){const p=l.split(/[,;\t]/).map(s=>s.trim());if(p.length>=2&&p[0]!==''&&p[1]!=='')pairs.push([p[0],p[1]])}return{pairs,names}}
+function crosstab(pairs){const xs=srt([...new Set(pairs.map(p=>p[0]))]),fs=srt([...new Set(pairs.map(p=>p[1]))]),xm=new Map(xs.map((v,i)=>[v,i])),fm=new Map(fs.map((v,i)=>[v,i])),O=xs.map(()=>fs.map(()=>0)),xi=[],fi=[];
+for(const[x,f]of pairs){const i=xm.get(x),j=fm.get(f);O[i][j]++;xi.push(i);fi.push(j)}return{xs,fs,O,xi,fi}}
+function lgamma(z){const c=[.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+z-=1;let x=c[0];for(let i=1;i<9;i++)x+=c[i]/(z+i);const t=z+7.5;return .5*Math.log(2*Math.PI)+(z+.5)*Math.log(t)-t+Math.log(x)}
+function gammaQ(a,x){if(x<=0)return 1;const pre=Math.exp(-x+a*Math.log(x)-lgamma(a));
+if(x<a+1){let ap=a,s=1/a,d=s;for(let n=0;n<2000;n++){ap++;d*=x/ap;s+=d;if(Math.abs(d)<Math.abs(s)*1e-16)break}return Math.max(0,1-s*pre)}
+let b=x+1-a,c=1e300,d=1/b,h=d;for(let i=1;i<2000;i++){const an=-i*(i-a);b+=2;d=an*d+b;if(Math.abs(d)<1e-300)d=1e-300;c=b+an/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;const del=d*c;h*=del;if(Math.abs(del-1)<1e-15)break}return pre*h}
+const pchisq=(x,df)=>gammaQ(df/2,x/2);
+function critChi(df,al){let lo=0,hi=1;while(pchisq(hi,df)>al)hi*=2;for(let i=0;i<80;i++){const m=(lo+hi)/2;if(pchisq(m,df)>al)lo=m;else hi=m}return(lo+hi)/2}
+function analyse(O){const r=O.length,c=O[0].length,R=O.map(a=>a.reduce((s,v)=>s+v,0)),C=O[0].map((_,j)=>O.reduce((s,a)=>s+a[j],0)),n=R.reduce((s,v)=>s+v,0),
+E=O.map((a,i)=>a.map((_,j)=>R[i]*C[j]/n));let chi=0,yates=0;O.forEach((a,i)=>a.forEach((o,j)=>{chi+=(o-E[i][j])**2/E[i][j];yates+=Math.max(0,Math.abs(o-E[i][j])-.5)**2/E[i][j]}));
+const df=(r-1)*(c-1),adj=O.map((a,i)=>a.map((o,j)=>(o-E[i][j])/Math.sqrt(E[i][j]*(1-R[i]/n)*(1-C[j]/n)))),ef=E.flat();
+return{r,c,R,C,n,E,chi,yates,df,V:Math.sqrt(chi/(n*Math.min(r-1,c-1))),p:pchisq(chi,df),pY:pchisq(yates,df),adj,minE:Math.min(...ef),lowE:ef.filter(v=>v<5).length/ef.length}}
+function permP(xi,fi,r,c,chiObs,B,rg){const n=xi.length,f=Int32Array.from(fi),R=Array(r).fill(0),C=Array(c).fill(0);for(let i=0;i<n;i++){R[xi[i]]++;C[fi[i]]++}let ge=0;
+for(let b=0;b<B;b++){for(let i=n-1;i>0;i--){const j=Math.floor(rg()*(i+1)),t=f[i];f[i]=f[j];f[j]=t}const O=Array.from({length:r},()=>new Array(c).fill(0));for(let i=0;i<n;i++)O[xi[i]][f[i]]++;
+let ch=0;for(let i=0;i<r;i++)for(let j=0;j<c;j++){const e=R[i]*C[j]/n;ch+=(O[i][j]-e)**2/e}if(ch>=chiObs-1e-9)ge++}return(ge+1)/(B+1)}
+const PRE={train:{names:['Training','Outcome'],rows:['Trained','Untrained'],cols:['Clicked','Reported','Ignored'],M:[[30,90,80],[70,30,100]]},
+day:{names:['Period','Intrusion'],rows:['Weekday','Weekend'],cols:['Blocked','Breached'],M:[[283,17],[192,8]]},
+os:{names:['OS','Status'],rows:['Windows','macOS','Linux'],cols:['Clean','Infected'],M:[[2805,195],[1701,99],[1146,54]]}};
+function genPre(id,seed){const P=PRE[id],L=[],r=rng(seed);P.M.forEach((row,i)=>row.forEach((k,j)=>{for(let q=0;q<k;q++)L.push(P.rows[i]+','+P.cols[j])}));
+for(let i=L.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[L[i],L[j]]=[L[j],L[i]]}return P.names.join(',')+'\n'+L.join('\n')}
+//ENDCORE
+const $=i=>document.getElementById(i);const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const PAL=()=>[css('--green'),css('--violet'),'#fbbf24','#60a5fa','#f87171','#f472b6','#2dd4bf','#fb923c'];
+const f4=x=>x.toFixed(4),pc=x=>(100*x).toFixed(1)+'%',pv=p=>p<1e-4?p.toExponential(2):p.toFixed(4);
+function loadPre(){const id=$('pre').value;if(id=='custom')return;$('dat').value=genPre(id,+$('seed').value|0);$('hdr').checked=true;run()}
+function tbl(head,rows,cls){return`<div class="scroll"><table><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr>${rows.map((r,i)=>`<tr class="${cls&&cls(i,rows.length)||''}">${r.map((c,j)=>`<td>${c}</td>`).join('')}</tr>`).join('')}</table></div>`}
+function stacked(cv,labels,mat,fs){const c=cv.getContext('2d'),W=cv.width,Hh=cv.height,P=PAL(),bw=(W-100)/labels.length;c.clearRect(0,0,W,Hh);c.font='13px sans-serif';
+labels.forEach((l,i)=>{let y=Hh-30;const x=60+i*bw;mat[i].forEach((v,j)=>{const h=v*(Hh-70);c.fillStyle=P[j%P.length];c.globalAlpha=i==labels.length-1?.55:.9;c.fillRect(x+6,y-h,bw-12,h);c.globalAlpha=1;if(h>14){c.fillStyle='#0b1110';c.textAlign='center';c.fillText(pc(v),x+bw/2,y-h/2+4)}y-=h});
+c.fillStyle=css('--muted');c.textAlign='center';c.fillText(l,x+bw/2,Hh-12)});c.textAlign='right';c.fillStyle=css('--muted');c.fillText('100%',54,34);c.fillText('0%',54,Hh-30);
+fs.forEach((f,j)=>{c.fillStyle=P[j%P.length];c.textAlign='left';c.fillText('■ '+f,64+j*150,16)})}
+function chiPlot(cv,df,chi,crit){const c=cv.getContext('2d'),W=cv.width,Hh=cv.height,xm=Math.max(chi*1.25,crit*1.8,8),pdf=x=>x<=0?0:Math.exp((df/2-1)*Math.log(x)-x/2-(df/2)*Math.LN2-lgamma(df/2)),X=x=>40+x/xm*(W-50);let ym=0;for(let i=1;i<=200;i++)ym=Math.max(ym,pdf(xm*i/200));ym=Math.min(ym,df==1?.7:ym)*1.1;const Y=v=>Hh-24-Math.min(v,ym)/ym*(Hh-34);
+c.clearRect(0,0,W,Hh);c.beginPath();c.moveTo(X(Math.min(crit,xm)),Y(0));for(let i=0;i<=200;i++){const x=crit+(xm-crit)*i/200;c.lineTo(X(x),Y(pdf(x)))}c.lineTo(X(xm),Y(0));c.fillStyle=css('--violet');c.globalAlpha=.35;c.fill();c.globalAlpha=1;
+c.strokeStyle=css('--green');c.lineWidth=2;c.beginPath();for(let i=1;i<=200;i++){const x=xm*i/200;i>1?c.lineTo(X(x),Y(pdf(x))):c.moveTo(X(x),Y(pdf(x)))}c.stroke();
+c.strokeStyle='#f87171';c.setLineDash([5,4]);c.beginPath();c.moveTo(X(Math.min(chi,xm)),8);c.lineTo(X(Math.min(chi,xm)),Hh-24);c.stroke();c.setLineDash([]);
+c.fillStyle=css('--muted');c.font='13px sans-serif';c.textAlign='center';c.fillText('0',X(0),Hh-8);c.fillText(xm.toFixed(0),X(xm),Hh-8);c.fillStyle='#f87171';c.fillText('observed χ² = '+chi.toFixed(2),Math.min(X(chi)+10,W-90),20);c.fillStyle=css('--violet');c.fillText('shaded: χ² ≥ critical value '+crit.toFixed(2)+' (α)',W/2,Hh-8)}
+function run(){const msg=$('msg');msg.textContent='';const{pairs,names}=parseData($('dat').value,$('hdr').checked);if(pairs.length<5){msg.innerHTML='<span class="bad">Need at least 5 valid records "x,f".</span>';return}
+const{xs,fs,O,xi,fi}=crosstab(pairs);if(xs.length<2||fs.length<2){msg.innerHTML='<span class="bad">Both variables need at least 2 distinct values.</span>';return}if(xs.length*fs.length>400){msg.innerHTML='<span class="bad">Too many categories: bin the variables first.</span>';return}
+const A=analyse(O),al=+$('al').value||.05,B=Math.max(0,Math.min(20000,+$('B').value|0)),crit=critChi(A.df,al),n=A.n,nx=names[0],nf=names[1];
+let pp=null;if(B>0)pp=permP(xi,fi,A.r,A.c,A.chi,B,rng(+$('seed').value|0));
+const head=[`${nx} \\ ${nf}`,...fs,'row total'],
+obs=O.map((a,i)=>[xs[i],...a,`<b>${A.R[i]}</b>`]).concat([['column total',...A.C.map(v=>`<b>${v}</b>`),`<b>${n}</b>`]]),
+joint=O.map((a,i)=>[xs[i],...a.map(v=>f4(v/n)),f4(A.R[i]/n)]).concat([['marginal P('+nf+')',...A.C.map(v=>f4(v/n)),'1.0000']]),
+cr=O.map((a,i)=>[xs[i],...a.map(v=>pc(v/A.R[i])),'100%']).concat([['all (marginal)',...A.C.map(v=>pc(v/n)),'100%']]),
+cc=O.map((a,i)=>[xs[i],...a.map((v,j)=>pc(v/A.C[j])),pc(A.R[i]/n)]).concat([['all (marginal)',...A.C.map(()=>'100%'),'100%']]),
+ex=A.E.map((a,i)=>[xs[i],...a.map(v=>v.toFixed(2)),A.R[i]]),
+rs=A.adj.map((a,i)=>[xs[i],...a.map(v=>`<span class="${Math.abs(v)>=2?(v>0?'ok':'bad'):''}">${v>=0?'+':''}${v.toFixed(2)}</span>`)]);
+const tot=(i,m)=>i==m-1?'tot':'';
+const reject=A.p<al,strength=A.V<.1?'negligible/small':A.V<.3?'small to moderate':A.V<.5?'moderate to large':'large';
+let h=`<h3>Observed contingency table (${nx} × ${nf}, n = ${n})</h3>${tbl(head,obs,tot)}
+<h3>Joint relative frequencies P(${nx}=x, ${nf}=f) and marginal of ${nf}</h3>${tbl(head,joint,tot)}
+<p>Marginal of ${nx}: ${xs.map((x,i)=>`P(${x}) = ${f4(A.R[i]/n)}`).join(' · ')}</p>
+<h3>Conditional frequencies P(${nf} | ${nx}) (each row sums to 100%)</h3>${tbl(head,cr,tot)}
+<h3>Conditional frequencies P(${nx} | ${nf}) (each column sums to 100%)</h3>${tbl(head,cc,tot)}
+<h3>Expected counts under independence, E = R·C/n</h3>${tbl([head[0],...fs,'row total'],ex)}
+<p>Smallest expected count: <b>${A.minE.toFixed(2)}</b>; cells with E &lt; 5: <b>${pc(A.lowE)}</b>. ${A.minE<1||A.lowE>.2?'<span class="bad">The chi-square approximation may be unreliable: look at the permutation p-value.</span>':'<span class="ok">The usual conditions for the chi-square approximation are met.</span>'}</p>
+<h3>Test statistic</h3><div class="eq">χ² = Σ (O − E)²/E = ${A.chi.toFixed(4)}      df = (${A.r} − 1)(${A.c} − 1) = ${A.df}      critical value at α = ${al}: ${crit.toFixed(3)}
+p-value = P(χ²_${A.df} ≥ ${A.chi.toFixed(3)}) = ${pv(A.p)}${A.r==2&&A.c==2?`\nYates-corrected (2×2): χ² = ${A.yates.toFixed(4)}, p = ${pv(A.pY)}`:''}${pp!==null?`\nPermutation p-value (${B} shuffles of ${nf}): ${pv(pp)}`:''}
+Cramér's V = ${A.V.toFixed(4)}</div>
+<div><div><canvas id="cs" width="940" height="420"></canvas><p>Distribution of ${nf} within each ${nx} group and overall (rightmost bar). Under independence all bars would have the same composition.</p></div><div style="margin-top:1rem"><canvas id="cp" width="940" height="380"></canvas><p>Density of χ²(${A.df}), the observed statistic and the rejection region.</p></div></div>
+<h3>Adjusted residuals (green: more than expected, red: fewer; |value| ≥ 2 highlighted)</h3>${tbl([head[0],...fs],rs)}
+<div class="verdict"><b>Conclusion.</b> ${reject?`p = ${pv(A.p)} &lt; α = ${al}: reject H₀. The data are <b>not compatible with independence</b>: ${nx} and ${nf} are statistically <b>associated</b>.`:`p = ${pv(A.p)} ≥ α = ${al}: do not reject H₀. The data are <b>compatible with independence</b> (this does not prove it).`}
+Strength of association: Cramér's V = ${A.V.toFixed(3)} (${strength}). ${reject&&A.V<.1?'The result is statistically significant but practically weak.':''} This describes an association only; it says nothing about which variable, if any, causes the other.</div>`;
+$('out').innerHTML=h;stacked($('cs'),[...xs.map(String),'all'],[...O.map((a,i)=>a.map(v=>v/A.R[i])),A.C.map(v=>v/n)],fs);chiPlot($('cp'),A.df,A.chi,crit)}
+loadPre();
+</script></body></html>
